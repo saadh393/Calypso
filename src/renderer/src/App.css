@@ -1,0 +1,171 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.controls-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  height: 44px;
+  background: #111;
+  border-top: 1px solid #222;
+  flex-shrink: 0;
+}
+
+.mic-btn,
+.send-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #333;
+  background: #1e1e1e;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.mic-btn:hover,
+.send-btn:hover {
+  background: #2a2a2a;
+  color: #fff;
+}
+
+.mic-btn.active {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #fff;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(192, 57, 43, 0);
+  }
+}
+
+.status {
+  font-size: 12px;
+  color: #666;
+  min-width: 90px;
+}
+
+.status.login-warning {
+  color: #e2a03f;
+  min-width: 0;
+}
+
+.mic-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  animation: none;
+}
+
+.hints {
+  margin-left: auto;
+  font-size: 11px;
+  color: #333;
+  font-variant-numeric: tabular-nums;
+}
+
+.output-toggle {
+  display: flex;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.output-toggle-btn {
+  padding: 0 10px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.output-toggle-btn:not(:last-child) {
+  border-right: 1px solid #3a3a3a;
+}
+
+.output-toggle-btn:hover {
+  color: #ddd;
+}
+
+.output-toggle-btn.active {
+  background: #2a2a2a;
+  color: #fff;
+}
+
+.connect-btn {
+  padding: 0 10px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid #3a3a3a;
+  background: transparent;
+  color: #bbb;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.connect-btn:hover {
+  background: #1a2a1a;
+  border-color: #2e6b2e;
+  color: #4caf50;
+}
+
+.quit-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #2a2a2a;
+  background: transparent;
+  color: #999;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.quit-btn:hover {
+  background: #3a1010;
+  border-color: #c0392b;
+  color: #e74c3c;
+}
