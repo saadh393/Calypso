@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, clipboard, session, systemPreferences, dia
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { createTray, updateTrayState } from './tray'
-import { registerShortcuts, unregisterShortcuts } from './shortcuts'
+import { getRegisteredRecordShortcut, registerShortcuts, unregisterShortcuts, updateRecordShortcut } from './shortcuts'
 import { createOverlay, showMessage, confirmMessage, resolveChoice } from './overlay'
 import { listAllProfiles, extractCookiesFromProfile } from './chrome-cookies'
 import { readSettings, writeSettings } from './settings'
@@ -198,7 +198,8 @@ app.whenReady().then(async () => {
   mainWindow = createWindow()
   createOverlay()
   createTray(mainWindow, importChromeSession)
-  const failedShortcuts = registerShortcuts(() => mainWindow)
+  const failedShortcuts = registerShortcuts(() => mainWindow, readSettings().recordShortcut)
+  writeSettings({ recordShortcut: getRegisteredRecordShortcut() })
   if (failedShortcuts.length > 0) {
     console.warn('[Shortcuts] Failed to register:', failedShortcuts)
     dialog.showErrorBox('Shortcut Conflict', `Could not register hotkeys: ${failedShortcuts.join(', ')}. Another app may be using them.`)
@@ -226,6 +227,15 @@ ipcMain.handle('deliver-text', (_, text) => deliverText(text))
 ipcMain.handle('get-output-mode', () => readSettings().outputMode)
 
 ipcMain.handle('set-output-mode', (_, mode) => writeSettings({ outputMode: mode }).outputMode)
+
+ipcMain.handle('get-record-shortcut', () => readSettings().recordShortcut)
+
+ipcMain.handle('set-record-shortcut', (_, shortcut) => {
+  const result = updateRecordShortcut(() => mainWindow, shortcut)
+  if (!result.ok) return result
+  writeSettings({ recordShortcut: result.shortcut })
+  return result
+})
 
 ipcMain.handle('ensure-mic-access', () => ensureMicrophoneAccess())
 

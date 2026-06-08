@@ -13,12 +13,15 @@ const WAIT_MORE_ACTIONS = [
   {label: "No", value: "cancel", variant: "neutral"},
   {label: "Record again", value: "again", variant: "neutral"},
 ];
+const DEFAULT_RECORD_SHORTCUT = "CommandOrControl+Shift+R";
 
 function App() {
   const webviewRef = useRef(null);
   const [status, setStatus] = useState("idle");
   const [isLoggedIn, setIsLoggedIn] = useState(true);
   const [outputMode, setOutputMode] = useState("clipboard");
+  const [recordShortcut, setRecordShortcut] = useState(DEFAULT_RECORD_SHORTCUT);
+  const [shortcutError, setShortcutError] = useState("");
   const [clipboardHistory, setClipboardHistory] = useState(loadClipboardHistory);
   const [webviewKey, setWebviewKey] = useState(0);
   const isRecordingRef = useRef(false);
@@ -30,12 +33,24 @@ function App() {
   useEffect(() => {
     window.api.ensureMicAccess();
     window.api.getOutputMode().then(setOutputMode);
+    window.api.getRecordShortcut().then((shortcut) => setRecordShortcut(shortcut || DEFAULT_RECORD_SHORTCUT));
     return () => clearTimeout(doneTimerRef.current);
   }, []);
 
   const changeOutputMode = useCallback((mode) => {
     setOutputMode(mode);
     window.api.setOutputMode(mode);
+  }, []);
+
+  const changeRecordShortcut = useCallback(async (shortcut) => {
+    const result = await window.api.setRecordShortcut(shortcut);
+    if (!result?.ok) {
+      setShortcutError(result?.error || "Shortcut is unavailable");
+      return;
+    }
+
+    setShortcutError("");
+    setRecordShortcut(result.shortcut);
   }, []);
 
   const addClipboardHistory = useCallback((text) => {
@@ -222,6 +237,9 @@ function App() {
         readiness={readiness}
         outputMode={outputMode}
         onOutputModeChange={changeOutputMode}
+        recordShortcut={recordShortcut}
+        onRecordShortcutChange={changeRecordShortcut}
+        shortcutError={shortcutError}
         history={clipboardHistory}
         onCopyHistoryItem={copyHistoryItem}
         onReloadWebview={reloadWebviewInstance}

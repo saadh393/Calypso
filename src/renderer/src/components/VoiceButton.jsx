@@ -17,6 +17,9 @@ function VoiceButton({
   readiness,
   outputMode,
   onOutputModeChange,
+  recordShortcut,
+  onRecordShortcutChange,
+  shortcutError,
   history,
   onCopyHistoryItem,
   onReloadWebview
@@ -49,6 +52,9 @@ function VoiceButton({
         open={settingsOpen}
         outputMode={outputMode}
         onOutputModeChange={onOutputModeChange}
+        recordShortcut={recordShortcut}
+        onRecordShortcutChange={onRecordShortcutChange}
+        shortcutError={shortcutError}
         history={history}
         onCopyHistoryItem={onCopyHistoryItem}
         onReloadWebview={onReloadWebview}

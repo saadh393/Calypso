@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import OutputModeToggle from './OutputModeToggle'
 import ClipboardHistory from './ClipboardHistory'
+import ShortcutRecorder from './ShortcutRecorder'
 
 const isMac = navigator.platform.startsWith('Mac')
 const mod = isMac ? '⌘' : 'Ctrl'
@@ -9,6 +10,9 @@ function SettingsMenu({
   open,
   outputMode,
   onOutputModeChange,
+  recordShortcut,
+  onRecordShortcutChange,
+  shortcutError,
   history,
   onCopyHistoryItem,
   onReloadWebview,
@@ -47,7 +51,11 @@ function SettingsMenu({
         <div className="settings-title">Shortcuts</div>
         <div className="shortcut-row">
           <span>Record</span>
-          <kbd>{mod}+Shift+R</kbd>
+          <ShortcutRecorder
+            value={recordShortcut}
+            onChange={onRecordShortcutChange}
+            error={shortcutError}
+          />
         </div>
         <div className="shortcut-row">
           <span>Send</span>

@@ -19,6 +19,8 @@ const api = {
   deliverText: (text) => ipcRenderer.invoke('deliver-text', text),
   getOutputMode: () => ipcRenderer.invoke('get-output-mode'),
   setOutputMode: (mode) => ipcRenderer.invoke('set-output-mode', mode),
+  getRecordShortcut: () => ipcRenderer.invoke('get-record-shortcut'),
+  setRecordShortcut: (shortcut) => ipcRenderer.invoke('set-record-shortcut', shortcut),
   ensureMicAccess: () => ipcRenderer.invoke('ensure-mic-access'),
   overlay,
   onToggleRecording: (cb) => ipcRenderer.on('toggle-recording', cb),

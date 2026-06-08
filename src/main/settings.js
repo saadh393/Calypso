@@ -2,7 +2,10 @@ import { app } from 'electron'
 import { readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 
-const DEFAULTS = { outputMode: 'clipboard' }
+const DEFAULTS = {
+  outputMode: 'clipboard',
+  recordShortcut: 'CommandOrControl+Shift+R'
+}
 
 function settingsPath() {
   return join(app.getPath('userData'), 'settings.json')
