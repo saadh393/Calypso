@@ -33,15 +33,21 @@ src/
                       onToggleRecording, onSendMessage, onStatusUpdate, importChromeSession,
                       onReloadWebview, quit (+ matching off* removers).
   renderer/src/
-    App.jsx           Coordinator. Wires hotkeys -> webview methods, owns `status` state.
+    App.jsx           Coordinator. Owns the sensor, wires hotkeys -> workflow.toggle / send.
     components/
-      WebViewContainer.jsx  The <webview>. Imperative API (see §5). Dictation + send + state watcher.
+      WebViewContainer.jsx  The <webview>. Imperative API (see §5): action methods + getDomNode + send.
       VoiceButton.jsx       Bottom control bar: mic, send, status label, "Import Cookie", quit.
     overlay/
       Overlay.jsx     Renders the status pill from STATUS_CONFIG.
       overlay.css     Pill + dot styles (dot classes: recording/processing/done).
+    hooks/
+      useChatGptSensor.js     Owns the single always-on sensor (one interval, one probe).
+      useChatGptReadiness.js  preparing/ready/error gate; reads cached sensor snapshot, reloads on stall.
+      useRecordingWorkflow.js Binds the workflow state machine to sensor + intent; exposes status/toggle/reset.
     lib/
-      dictationState.js  buildDictationStateScript() -> returns 'listening'|'transcribing'|'ready'|'idle'.
+      chatgptSelectors.js  Canonical SELECTORS + SNAPSHOT_SCRIPT (the one combined probe).
+      chatgptSensor.js     createChatGptSensor(): ONE interval, runs SNAPSHOT_SCRIPT, notifies subscribers on change.
+      recordingWorkflow.js createRecordingWorkflow(): idle|preparing|recording|transcribing|delivering|done state machine + timers.
 ```
 
 ---
@@ -80,25 +86,34 @@ in a loop and logs failures, run with `./node_modules/.bin/electron <file>.mjs`.
 
 ## 4. Pillar B — Voice dictation + status hints (DONE)
 
+> **Architecture (sensor + workflow).** All webview *sensing* goes through ONE always-on loop;
+> all *intent/time policy* lives in ONE state machine. There are no per-action pollers or
+> re-entrancy refs anymore.
+
 **Hotkeys** (`shortcuts.js`, registered globally):
-- `Ctrl+Shift+R` → `toggle-recording` IPC → `App.toggleRecording()`.
+- `Ctrl+Shift+R` → `toggle-recording` IPC → `workflow.toggle()`.
 - `Ctrl+Shift+D` → `send-message` IPC → `WebViewContainer.send()`.
 
-**toggleRecording()** (`App.jsx`):
-- Always calls `webviewRef.triggerDictation()` (sends Ctrl+Shift+D into the webview to toggle ChatGPT's mic).
-- **Start**: status `listening`; starts `watchDictationState(cb)` poller. Poller ignores `idle` so the pill
-  doesn't flicker before the waveform renders.
-- **Stop**: `stopDictationState()`; status `transcribing`; `readAndCopyInputText()` polls `#prompt-textarea`,
-  copies text to clipboard via IPC, clears the box, reloads webview; then status `done` → `idle` after 2s.
+**Layer 1 — Sensor** (`lib/chatgptSensor.js` + `chatgptSelectors.SNAPSHOT_SCRIPT`, owned by `useChatGptSensor`):
+- ONE `setInterval` (~400ms), always running while the webview is mounted (survives reloads via `getDomNode`).
+- Each tick runs ONE combined probe → `{ ready, dictation: 'idle'|'listening'|'transcribing', hasText, text }`.
+- Stores the latest snapshot; notifies subscribers only on change; never throws (loading/reload → not-ready).
 
-**State detection** (`lib/dictationState.js`, polled every 300ms) — maps ChatGPT DOM → status:
-| DOM signal                                   | status         | pill label            |
-|----------------------------------------------|----------------|-----------------------|
-| `canvas.h-14` (waveform) present             | `listening`    | "Listening — speak now" (red blink) |
-| `[aria-label="Submit dictation"]` present    | `transcribing` | "Transcribing..." (amber) |
-| text in composer + `[data-testid=send-button]` | `ready`      | "Text ready" (green)  |
-| else                                         | `idle`         | (pill hidden)         |
-| (after copy)                                 | `done`         | "Copied to clipboard" |
+**Layer 2 — Workflow** (`lib/recordingWorkflow.js`, bound by `useRecordingWorkflow`):
+- States `idle → preparing → recording → transcribing → delivering → done → idle`.
+- Driven by **intent** (`toggle()`) + **sensor transitions**; owns the timers (40s start-confirm,
+  5-min transcribe wait → `confirm` prompt, done→idle 2s) and a deliver-once guard.
+- Start: `clearInput`, wait for `snap.ready`, `triggerDictation`, confirm via `snap.dictation==='listening'`.
+- Stop (or external stop): any move off `listening` → `transcribing`; deliver when `snap.hasText && snap.text`,
+  then `deliverText` (clipboard/paste), add to clipboard history, `clearAndReload`, `done`.
+
+**Snapshot signals** (`SNAPSHOT_SCRIPT`) — maps ChatGPT DOM → fields:
+| DOM signal                                       | field            |
+|--------------------------------------------------|------------------|
+| `#prompt-textarea` + `button[aria-label="Start dictation"]` | `ready: true` |
+| `canvas.h-14` (waveform) present                 | `dictation: 'listening'` |
+| `[aria-label="Submit dictation"]` present        | `dictation: 'transcribing'` |
+| composer text + `[data-testid=send-button]`      | `hasText: true`, `text` |
 
 **Reference DOM (ChatGPT composer), for selector maintenance:**
 - ready/idle mic: `<button aria-label="Start dictation" class="composer-btn ...">`
@@ -113,13 +128,15 @@ update `dictationState.js` + the `send`/`readAndCopyInputText` selectors in `Web
 
 ## 5. WebViewContainer imperative API (the integration surface)
 
-`useImperativeHandle` exposes:
+`useImperativeHandle` exposes **action methods only** (no sensing — that lives in the sensor):
+- `getDomNode()` — the raw `<webview>` element; the sensor calls `executeJavaScript` through it.
 - `reload()`
 - `triggerDictation()` — toggles ChatGPT mic (sendInputEvent + dispatched KeyboardEvent Ctrl+Shift+D).
-- `watchDictationState(onState)` / `stopDictationState()` — 300ms poller over `buildDictationStateScript()`.
-- `readAndCopyInputText()` — polls `#prompt-textarea` (≤20×200ms), copies, clears, reloads.
+- `clearInput()` — clears `#prompt-textarea`.
+- `clearAndReload()` — clears composer, waits 400ms, reloads.
 - `insertText(text)` / `send()` — `send()` clicks `[data-testid=send-button]` then polls for the new
   `[data-message-author-role="assistant"]` message (every 600ms, 120s cap) and auto-copies its innerText.
+  (`send` keeps its own poller; it is an independent additive feature.)
 
 Webview config: `src=https://chatgpt.com`, `partition="persist:chatgpt"` (keeps login),
 spoofed Chrome `useragent`, `allowpopups`.

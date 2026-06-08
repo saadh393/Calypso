@@ -9,8 +9,16 @@ export const SELECTORS = {
 }
 
 const exists = (selector) => `document.querySelector(${JSON.stringify(selector)})`
-const missing = (selector) => `!document.querySelector(${JSON.stringify(selector)})`
 
-export const READINESS_SCRIPT = `(() => Boolean(${exists(SELECTORS.composer)} && ${exists(SELECTORS.startDictation)}))()`
-
-export const RECORDING_STARTED_SCRIPT = `(() => Boolean(${missing(SELECTORS.startDictation)} && ${exists(SELECTORS.canvas)}))()`
+export const SNAPSHOT_SCRIPT = `
+  (() => {
+    const composer = ${exists(SELECTORS.composer)};
+    const ready = Boolean(composer && ${exists(SELECTORS.startDictation)});
+    const el = composer || ${exists('[contenteditable="true"]')};
+    const text = el ? (el.value || el.innerText || el.textContent || '').trim() : '';
+    let dictation = 'idle';
+    if (${exists('canvas.h-14')}) dictation = 'listening';
+    else if (${exists(SELECTORS.submitDictation)}) dictation = 'transcribing';
+    return { ready, dictation, hasText: Boolean(text && ${exists(SELECTORS.sendButton)}), text };
+  })()
+`

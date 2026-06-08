@@ -86,9 +86,15 @@
 
 ---
 
+## H. Centralized sensor + workflow (DONE)
+
+- [x] Single always-on sensor: ONE interval (~400ms), ONE combined probe → `{ ready, dictation, hasText, text }`, notifies subscribers on change, never throws. (`lib/chatgptSensor.js`, `lib/chatgptSelectors.SNAPSHOT_SCRIPT`, `hooks/useChatGptSensor.js`)
+- [x] Workflow state machine `idle|preparing|recording|transcribing|delivering|done` driven by intent + sensor transitions; owns the timers (40s start-confirm, 5-min wait, done→idle 2s) and deliver-once guard. (`lib/recordingWorkflow.js`, `hooks/useRecordingWorkflow.js`)
+- [x] Readiness gate reads the cached sensor snapshot instead of its own probe. (`hooks/useChatGptReadiness.js`)
+- [x] Deleted the 5 sensing pollers and the re-entrancy refs (`startTokenRef`, `isRecordingRef`, `confirmedRef`, `isBusyRef`, `doneTimerRef`), the manual `watchDictationState` lifecycle, and `lib/dictationState.js`.
+- [x] `send()` (Cmd+Shift+D reply poll) left as-is — independent additive feature.
+
 ## Already implemented (carried over)
 
 - [x] Cookie import from Chrome/Brave/Edge (decrypt + inject into `persist:chatgpt`). (`chrome-cookies.js`, `index.js`)
 - [x] Send-to-ChatGPT + reply polling on Cmd+Shift+D. (`WebViewContainer.send`, `shortcuts.js`)
-- [x] Re-entrancy guard during transcribe. (`App.jsx` `isBusyRef`)
-- [x] Optimistic recording-state reconciliation via dictation watcher. (`App.jsx`)
