@@ -1,6 +1,7 @@
 const DONE_RESET_MS = 2000;
 const TRANSCRIBE_WAIT_MS = 5 * 60 * 1000;
-const CONFIRM_START_MS = 40 * 1000;
+const DEFAULT_PREPARE_MS = 7000;
+const EMPTY_SETTLE_MS = 1200;
 const MAX_START_ATTEMPTS = 3;
 
 const WAIT_MORE_ACTIONS = [
@@ -18,24 +19,27 @@ const UI_STATUS = {
   done: "done",
 };
 
-export function createRecordingWorkflow({setStatus, overlay, actions, getSnapshot}) {
+export function createRecordingWorkflow({setStatus, overlay, actions, getSnapshot, getPrepareMs}) {
   let state = "idle";
   let triggered = false;
   let delivered = false;
   let attempts = 0;
-  let confirmTimer = null;
+  let prepareTimer = null;
   let transcribeTimer = null;
   let doneTimer = null;
+  let emptyTimer = null;
   let readiness = "preparing";
 
   const enter = (next) => {
+    if (state === "recording" && next !== "recording") actions.setRecordingActive(false);
+    if (next === "recording" && state !== "recording") actions.setRecordingActive(true);
     state = next;
     setStatus(UI_STATUS[next] ?? "idle");
   };
 
-  const clearConfirm = () => {
-    clearTimeout(confirmTimer);
-    confirmTimer = null;
+  const clearPrepare = () => {
+    clearTimeout(prepareTimer);
+    prepareTimer = null;
   };
   const clearTranscribe = () => {
     clearTimeout(transcribeTimer);
@@ -45,10 +49,15 @@ export function createRecordingWorkflow({setStatus, overlay, actions, getSnapsho
     clearTimeout(doneTimer);
     doneTimer = null;
   };
+  const clearEmpty = () => {
+    clearTimeout(emptyTimer);
+    emptyTimer = null;
+  };
   const clearAll = () => {
-    clearConfirm();
+    clearPrepare();
     clearTranscribe();
     clearDone();
+    clearEmpty();
   };
 
   const reset = () => {
@@ -67,6 +76,20 @@ export function createRecordingWorkflow({setStatus, overlay, actions, getSnapsho
     overlay.error(message);
   };
 
+  const armPrepare = () => {
+    clearPrepare();
+    prepareTimer = setTimeout(() => {
+      attempts += 1;
+      if (attempts >= MAX_START_ATTEMPTS) {
+        fail("Couldn't start recording — ChatGPT may have changed");
+        return;
+      }
+      triggered = false;
+      actions.reload();
+      armPrepare();
+    }, getPrepareMs?.() || DEFAULT_PREPARE_MS);
+  };
+
   const start = () => {
     clearAll();
     triggered = false;
@@ -75,24 +98,12 @@ export function createRecordingWorkflow({setStatus, overlay, actions, getSnapsho
     enter("preparing");
     overlay.status("Preparing ChatGPT…", "processing", "preparing");
     actions.clearInput();
+    armPrepare();
     pump();
   };
 
-  const armConfirm = () => {
-    clearConfirm();
-    confirmTimer = setTimeout(() => {
-      attempts += 1;
-      if (attempts >= MAX_START_ATTEMPTS) {
-        fail("Couldn't start recording — ChatGPT may have changed");
-        return;
-      }
-      triggered = false;
-      actions.reload();
-    }, CONFIRM_START_MS);
-  };
-
   const toRecording = () => {
-    clearConfirm();
+    clearPrepare();
     enter("recording");
     overlay.status("Recording — speak now", "recording", "recording");
   };
@@ -103,7 +114,7 @@ export function createRecordingWorkflow({setStatus, overlay, actions, getSnapsho
   };
 
   const toTranscribing = () => {
-    clearConfirm();
+    clearPrepare();
     delivered = false;
     enter("transcribing");
     overlay.status("Transcribing…", "processing", "transcripted");
@@ -128,10 +139,28 @@ export function createRecordingWorkflow({setStatus, overlay, actions, getSnapsho
     reset();
   }
 
+  const armEmpty = () => {
+    if (emptyTimer) return;
+    emptyTimer = setTimeout(onEmpty, EMPTY_SETTLE_MS);
+  };
+
+  function onEmpty() {
+    emptyTimer = null;
+    if (state !== "transcribing") return;
+    const snap = getSnapshot();
+    if (snap.hasText && snap.text) {
+      deliver(snap.text);
+      return;
+    }
+    overlay.notice("No speech detected", DONE_RESET_MS);
+    reset();
+  }
+
   async function deliver(text) {
     if (delivered) return;
     delivered = true;
     clearTranscribe();
+    clearEmpty();
     enter("delivering");
     const result = await actions.deliverText(text);
     actions.addHistory(text);
@@ -147,14 +176,20 @@ export function createRecordingWorkflow({setStatus, overlay, actions, getSnapsho
       if (!triggered && snap.ready) {
         actions.triggerDictation();
         triggered = true;
-        armConfirm();
       } else if (triggered && snap.dictation === "listening") {
         toRecording();
       }
     } else if (state === "recording") {
       if (snap.dictation !== "listening") toTranscribing();
     } else if (state === "transcribing") {
-      if (snap.hasText && snap.text) deliver(snap.text);
+      if (snap.hasText && snap.text) {
+        clearEmpty();
+        deliver(snap.text);
+      } else if (snap.ready) {
+        armEmpty();
+      } else {
+        clearEmpty();
+      }
     }
   };
 
@@ -172,6 +207,12 @@ export function createRecordingWorkflow({setStatus, overlay, actions, getSnapsho
     }
   };
 
+  const cancel = () => {
+    if (state !== "recording" && state !== "preparing") return;
+    if (triggered) actions.triggerDictation();
+    reset();
+  };
+
   const setReadiness = (value) => {
     readiness = value;
     if (state === "preparing" && readiness === "error") {
@@ -179,5 +220,5 @@ export function createRecordingWorkflow({setStatus, overlay, actions, getSnapsho
     }
   };
 
-  return {handleSnapshot, toggle, reset, setReadiness, dispose: clearAll};
+  return {handleSnapshot, toggle, cancel, reset, setReadiness, dispose: clearAll};
 }

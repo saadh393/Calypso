@@ -76,6 +76,25 @@ body,
   flex-shrink: 0;
 }
 
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.slider-input {
+  flex: 1;
+  accent-color: #4e7edb;
+  cursor: pointer;
+}
+
+.slider-value {
+  min-width: 32px;
+  color: #ddd;
+  font-size: 12px;
+  text-align: right;
+}
+
 .output-toggle-btn {
   padding: 0 10px;
   height: 26px;

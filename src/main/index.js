@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, clipboard, session, systemPreferences, dia
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { createTray, updateTrayState } from './tray'
-import { getRegisteredRecordShortcut, registerShortcuts, unregisterShortcuts, updateRecordShortcut } from './shortcuts'
+import { getRegisteredRecordShortcut, registerShortcuts, unregisterShortcuts, updateRecordShortcut, registerCancelShortcut, unregisterCancelShortcut } from './shortcuts'
 import { createOverlay, showMessage, confirmMessage, resolveChoice } from './overlay'
 import { listAllProfiles, extractCookiesFromProfile } from './chrome-cookies'
 import { readSettings, writeSettings } from './settings'
@@ -220,6 +220,11 @@ app.on('will-quit', unregisterShortcuts)
 
 app.on('window-all-closed', () => {})
 
+ipcMain.on('recording-active', (_, active) => {
+  if (active) registerCancelShortcut(() => mainWindow)
+  else unregisterCancelShortcut()
+})
+
 ipcMain.on('copy-to-clipboard', (_, text) => clipboard.writeText(text))
 
 ipcMain.handle('deliver-text', (_, text) => deliverText(text))
@@ -227,6 +232,10 @@ ipcMain.handle('deliver-text', (_, text) => deliverText(text))
 ipcMain.handle('get-output-mode', () => readSettings().outputMode)
 
 ipcMain.handle('set-output-mode', (_, mode) => writeSettings({ outputMode: mode }).outputMode)
+
+ipcMain.handle('get-prepare-seconds', () => readSettings().prepareSeconds)
+
+ipcMain.handle('set-prepare-seconds', (_, seconds) => writeSettings({ prepareSeconds: seconds }).prepareSeconds)
 
 ipcMain.handle('get-record-shortcut', () => readSettings().recordShortcut)
 

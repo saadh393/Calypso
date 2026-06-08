@@ -1,10 +1,8 @@
 import {forwardRef, useRef, useImperativeHandle, useEffect} from "react";
 import {delay} from "../lib/poll";
+import {randomUserAgent} from "../lib/userAgents";
 
 const CHATGPT_URL = "https://chatgpt.com";
-
-const USER_AGENT =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 function buildInsertScript(text) {
   const escaped = JSON.stringify(text);
@@ -69,6 +67,15 @@ function buildPollScript(beforeCount) {
 const WebViewContainer = forwardRef(({onLoginState}, ref) => {
   const domRef = useRef(null);
   const watcherRef = useRef(null);
+  const initialUserAgent = useRef(randomUserAgent());
+
+  const rotateUserAgent = () => {
+    try {
+      domRef.current?.setUserAgent(randomUserAgent());
+    } catch {
+      void 0;
+    }
+  };
 
   const clearWatcher = () => {
     if (watcherRef.current) {
@@ -111,7 +118,10 @@ const WebViewContainer = forwardRef(({onLoginState}, ref) => {
   useImperativeHandle(ref, () => ({
     getDomNode: () => domRef.current,
 
-    reload: () => domRef.current?.reload(),
+    reload: () => {
+      rotateUserAgent();
+      domRef.current?.reload();
+    },
 
     triggerDictation,
 
@@ -124,6 +134,7 @@ const WebViewContainer = forwardRef(({onLoginState}, ref) => {
       if (!wv) return;
       await wv.executeJavaScript(buildClearInputScript()).catch(() => {});
       await delay(400);
+      rotateUserAgent();
       wv.reload();
     },
 
@@ -173,7 +184,7 @@ const WebViewContainer = forwardRef(({onLoginState}, ref) => {
       ref={domRef}
       src={CHATGPT_URL}
       partition="persist:chatgpt"
-      useragent={USER_AGENT}
+      useragent={initialUserAgent.current}
       allowpopups="true"
       webpreferences="backgroundThrottling=false"
       style={{flex: 1, width: "100%", height: "100%"}}

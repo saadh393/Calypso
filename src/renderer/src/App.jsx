@@ -9,6 +9,7 @@ import "./App.css";
 
 const DONE_RESET_MS = 2000;
 const DEFAULT_RECORD_SHORTCUT = "CommandOrControl+Shift+R";
+const DEFAULT_PREPARE_SECONDS = 7;
 
 function App() {
   const webviewRef = useRef(null);
@@ -16,6 +17,7 @@ function App() {
   const [outputMode, setOutputMode] = useState("clipboard");
   const [recordShortcut, setRecordShortcut] = useState(DEFAULT_RECORD_SHORTCUT);
   const [shortcutError, setShortcutError] = useState("");
+  const [prepareSeconds, setPrepareSeconds] = useState(DEFAULT_PREPARE_SECONDS);
   const [clipboardHistory, setClipboardHistory] = useState(loadClipboardHistory);
   const [webviewKey, setWebviewKey] = useState(0);
 
@@ -30,17 +32,24 @@ function App() {
     });
   }, []);
 
-  const {status, toggle, reset} = useRecordingWorkflow({
+  const {status, toggle, cancel, reset} = useRecordingWorkflow({
     webviewRef,
     sensor,
     readiness,
     addHistory: addClipboardHistory,
+    prepareSeconds,
   });
 
   useEffect(() => {
     window.api.ensureMicAccess();
     window.api.getOutputMode().then(setOutputMode);
     window.api.getRecordShortcut().then((shortcut) => setRecordShortcut(shortcut || DEFAULT_RECORD_SHORTCUT));
+    window.api.getPrepareSeconds().then((seconds) => setPrepareSeconds(seconds || DEFAULT_PREPARE_SECONDS));
+  }, []);
+
+  const changePrepareSeconds = useCallback((seconds) => {
+    setPrepareSeconds(seconds);
+    window.api.setPrepareSeconds(seconds);
   }, []);
 
   const changeOutputMode = useCallback((mode) => {
@@ -76,6 +85,8 @@ function App() {
 
   const toggleRef = useRef(toggle);
   toggleRef.current = toggle;
+  const cancelRef = useRef(cancel);
+  cancelRef.current = cancel;
 
   const sendMessage = useCallback(() => {
     webviewRef.current?.send();
@@ -83,10 +94,12 @@ function App() {
 
   useEffect(() => {
     window.api.onToggleRecording(() => toggleRef.current?.());
+    window.api.onCancelRecording(() => cancelRef.current?.());
     window.api.onSendMessage(() => sendMessage());
     window.api.onReloadWebview(() => reloadWebviewInstance());
     return () => {
       window.api.offToggleRecording();
+      window.api.offCancelRecording();
       window.api.offSendMessage();
       window.api.offReloadWebview();
     };
@@ -104,6 +117,8 @@ function App() {
         recordShortcut={recordShortcut}
         onRecordShortcutChange={changeRecordShortcut}
         shortcutError={shortcutError}
+        prepareSeconds={prepareSeconds}
+        onPrepareSecondsChange={changePrepareSeconds}
         history={clipboardHistory}
         onCopyHistoryItem={copyHistoryItem}
         onReloadWebview={reloadWebviewInstance}

@@ -3,8 +3,31 @@ import { globalShortcut } from 'electron'
 export const DEFAULT_RECORD_SHORTCUT = 'CommandOrControl+Shift+R'
 
 const SEND_SHORTCUT = 'CommandOrControl+Shift+D'
+const CANCEL_SHORTCUT = 'Escape'
 
 let currentRecordShortcut = null
+let escapeRegistered = false
+
+export function registerCancelShortcut(getWindow) {
+  if (escapeRegistered) return
+  try {
+    if (globalShortcut.register(CANCEL_SHORTCUT, () => {
+      getWindow()?.webContents.send('cancel-recording')
+    })) escapeRegistered = true
+  } catch {
+    escapeRegistered = false
+  }
+}
+
+export function unregisterCancelShortcut() {
+  if (!escapeRegistered) return
+  try {
+    globalShortcut.unregister(CANCEL_SHORTCUT)
+  } catch {
+    void 0
+  }
+  escapeRegistered = false
+}
 
 function registerRecordShortcut(getWindow, shortcut) {
   if (!shortcut) return false
@@ -57,4 +80,5 @@ export function getRegisteredRecordShortcut() {
 export function unregisterShortcuts() {
   globalShortcut.unregisterAll()
   currentRecordShortcut = null
+  escapeRegistered = false
 }

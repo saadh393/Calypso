@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import OutputModeToggle from './OutputModeToggle'
 import ClipboardHistory from './ClipboardHistory'
 import ShortcutRecorder from './ShortcutRecorder'
+import PrepareTimeoutSlider from './PrepareTimeoutSlider'
 
 const isMac = navigator.platform.startsWith('Mac')
 const mod = isMac ? '⌘' : 'Ctrl'
@@ -13,6 +14,8 @@ function SettingsMenu({
   recordShortcut,
   onRecordShortcutChange,
   shortcutError,
+  prepareSeconds,
+  onPrepareSecondsChange,
   history,
   onCopyHistoryItem,
   onReloadWebview,
@@ -61,6 +64,11 @@ function SettingsMenu({
           <span>Send</span>
           <kbd>{mod}+Shift+D</kbd>
         </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-title">Preparation timeout</div>
+        <PrepareTimeoutSlider value={prepareSeconds} onChange={onPrepareSecondsChange} />
       </section>
 
       <section className="settings-section">

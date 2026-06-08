@@ -4,7 +4,8 @@ import { join } from 'path'
 
 const DEFAULTS = {
   outputMode: 'clipboard',
-  recordShortcut: 'CommandOrControl+Shift+R'
+  recordShortcut: 'CommandOrControl+Shift+R',
+  prepareSeconds: 7
 }
 
 function settingsPath() {

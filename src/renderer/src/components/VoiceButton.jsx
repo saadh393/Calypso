@@ -20,6 +20,8 @@ function VoiceButton({
   recordShortcut,
   onRecordShortcutChange,
   shortcutError,
+  prepareSeconds,
+  onPrepareSecondsChange,
   history,
   onCopyHistoryItem,
   onReloadWebview
@@ -55,6 +57,8 @@ function VoiceButton({
         recordShortcut={recordShortcut}
         onRecordShortcutChange={onRecordShortcutChange}
         shortcutError={shortcutError}
+        prepareSeconds={prepareSeconds}
+        onPrepareSecondsChange={onPrepareSecondsChange}
         history={history}
         onCopyHistoryItem={onCopyHistoryItem}
         onReloadWebview={onReloadWebview}
