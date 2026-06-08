@@ -193,6 +193,9 @@ const WebViewContainer = forwardRef(({onLoginState}, ref) => {
       const alive = () => token === startTokenRef.current && Boolean(domRef.current);
       const probe = (script) => executeWebviewScript(domRef.current, script);
 
+      await domRef.current.executeJavaScript(buildClearInputScript()).catch(() => {});
+      await delay(300);
+
       for (let attempt = 0; attempt < MAX_START_ATTEMPTS; attempt++) {
         if (!alive()) return false;
         onState?.("preparing");
