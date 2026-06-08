@@ -7,6 +7,7 @@ import { createOverlay, showMessage, confirmMessage, resolveChoice } from './ove
 import { listAllProfiles, extractCookiesFromProfile } from './chrome-cookies'
 import { readSettings, writeSettings } from './settings'
 import { pasteAtCursor } from './paste'
+import { APP_NAME, getAppIcon } from './assets'
 
 const ACCESSIBILITY_SETTINGS_URL =
   'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
@@ -16,7 +17,7 @@ function promptAccessibility() {
     .showMessageBox(mainWindow, {
       type: 'warning',
       title: 'Accessibility Permission Needed',
-      message: 'Voice Input needs Accessibility permission to paste at the cursor.',
+      message: `${APP_NAME} needs Accessibility permission to paste at the cursor.`,
       detail:
         'Your text is on the clipboard, so nothing is lost. Grant access in System Settings → Privacy & Security → Accessibility, then try again.',
       buttons: ['Open System Settings', 'OK'],
@@ -129,10 +130,14 @@ async function importChromeSession() {
 }
 
 function createWindow() {
+  const icon = getAppIcon()
+
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 860,
+    width: 520,
+    height: 760,
     show: false,
+    title: APP_NAME,
+    icon,
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -180,7 +185,9 @@ app.on('before-quit', () => {
 })
 
 app.whenReady().then(async () => {
-  electronApp.setAppUserModelId('com.voice-input.app')
+  app.setName(APP_NAME)
+  if (process.platform === 'darwin') app.dock?.setIcon(getAppIcon())
+  electronApp.setAppUserModelId('com.calypso.app')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -232,6 +239,6 @@ ipcMain.on('overlay:choice', (_, { id, choice }) => resolveChoice(id, choice))
 
 ipcMain.on('quit-app', () => app.quit())
 
-ipcMain.on('notify-error', (_, message) => dialog.showErrorBox('Voice Input', message))
+ipcMain.on('notify-error', (_, message) => dialog.showErrorBox(APP_NAME, message))
 
 ipcMain.handle('import-chrome-session', () => importChromeSession())

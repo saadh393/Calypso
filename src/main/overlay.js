@@ -1,5 +1,6 @@
-import { BrowserWindow, screen } from 'electron'
+import { app, BrowserWindow, screen } from 'electron'
 import { join } from 'path'
+import { pathToFileURL } from 'url'
 import { is } from '@electron-toolkit/utils'
 
 const SIZES = {
@@ -8,6 +9,11 @@ const SIZES = {
 }
 const TIMEOUTS = { notice: 3000, error: 4500 }
 const MARGIN = 20
+const SOUND_FILES = {
+  preparing: 'preparing.mp3',
+  recording: 'record.mp3',
+  transcripted: 'transcripted.mp3'
+}
 
 let win = null
 let dismissTimer = null
@@ -43,6 +49,18 @@ function hideOverlay() {
   dismissTimer = null
   setInteractive(false)
   if (win && !win.isDestroyed()) win.hide()
+}
+
+function getSoundUrl(sound) {
+  const file = SOUND_FILES[sound]
+  if (!file) return null
+
+  const path = app.isPackaged ? join(process.resourcesPath, file) : join(process.cwd(), 'resources', file)
+  return pathToFileURL(path).toString()
+}
+
+function buildRenderMessage(msg, id) {
+  return { ...msg, id, soundUrl: getSoundUrl(msg.sound) }
 }
 
 export function createOverlay() {
@@ -97,7 +115,7 @@ export function showMessage(msg) {
 
   const id = ++seq
   applySize(msg.kind)
-  win.webContents.send('overlay:render', { ...msg, id })
+  win.webContents.send('overlay:render', buildRenderMessage(msg, id))
   setInteractive(false)
   if (!win.isVisible()) win.showInactive()
 
@@ -114,7 +132,7 @@ export function confirmMessage(msg) {
 
   const id = ++seq
   applySize('confirm')
-  win.webContents.send('overlay:render', { ...msg, kind: 'confirm', id })
+  win.webContents.send('overlay:render', buildRenderMessage({ ...msg, kind: 'confirm' }, id))
   setInteractive(true)
   if (!win.isVisible()) win.showInactive()
 

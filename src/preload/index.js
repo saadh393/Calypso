@@ -2,9 +2,12 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 const overlay = {
-  status: (label, tone = 'info') => ipcRenderer.send('overlay:show', { kind: 'status', label, tone }),
+  status: (label, tone = 'info', sound = null) =>
+    ipcRenderer.send('overlay:show', { kind: 'status', label, tone, sound }),
   notice: (label, timeout, tone = 'success') =>
     ipcRenderer.send('overlay:show', { kind: 'notice', label, timeout, tone }),
+  transcripted: (label, timeout, tone = 'success') =>
+    ipcRenderer.send('overlay:show', { kind: 'notice', label, timeout, tone, sound: 'transcripted' }),
   error: (label, timeout, tone = 'error') =>
     ipcRenderer.send('overlay:show', { kind: 'error', label, timeout, tone }),
   confirm: (label, actions) => ipcRenderer.invoke('overlay:confirm', { label, actions }),

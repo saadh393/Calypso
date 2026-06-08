@@ -1,23 +1,11 @@
-import { Tray, Menu, nativeImage, app } from 'electron'
-import { join } from 'path'
-import { is } from '@electron-toolkit/utils'
+import { Tray, Menu, app } from 'electron'
+import { APP_NAME, getTrayIcon } from './assets'
 
 let tray = null
 
-function getIcon() {
-  const iconPath = is.dev
-    ? join(process.cwd(), 'resources/microphoneTemplate.png')
-    : join(process.resourcesPath, 'microphoneTemplate.png')
-
-  const icon = nativeImage.createFromPath(iconPath)
-  if (icon.isEmpty()) return icon
-  icon.setTemplateImage(true)
-  return icon
-}
-
 export function createTray(mainWindow, onImportChrome) {
-  tray = new Tray(getIcon())
-  tray.setToolTip('Voice Input')
+  tray = new Tray(getTrayIcon())
+  tray.setToolTip(APP_NAME)
 
   const items = [
     {

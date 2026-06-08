@@ -1,5 +1,6 @@
 {
-  "name": "voice-input",
+  "name": "calypso",
+  "productName": "Calypso",
   "version": "1.0.0",
   "description": "ChatGPT WebView controller with voice input and global hotkeys",
   "main": "out/main/index.js",

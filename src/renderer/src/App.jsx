@@ -47,11 +47,11 @@ function App() {
   const handleStartState = useCallback((state) => {
     if (state === "preparing") {
       setStatus("preparing");
-      window.api.overlay.status("Preparing ChatGPT…", "processing");
+      window.api.overlay.status("Preparing ChatGPT…", "processing", "preparing");
     } else if (state === "recording") {
       confirmedRef.current = true;
       setStatus("recording");
-      window.api.overlay.status("Recording — speak now", "recording");
+      window.api.overlay.status("Recording — speak now", "recording", "recording");
     }
   }, []);
 
@@ -77,7 +77,7 @@ function App() {
     confirmedRef.current = false;
     setIsRecording(true);
     setStatus("preparing");
-    window.api.overlay.status("Preparing ChatGPT…", "processing");
+    window.api.overlay.status("Preparing ChatGPT…", "processing", "preparing");
 
     const started = await webviewRef.current?.startRecording({onState: handleStartState});
 
@@ -99,7 +99,7 @@ function App() {
     const result = await window.api.deliverText(text);
     webviewRef.current?.clearAndReload();
     setStatus("done");
-    window.api.overlay.notice(result?.pasted ? "Pasted at cursor" : "Copied to clipboard", DONE_RESET_MS);
+    window.api.overlay.transcripted(result?.pasted ? "Pasted at cursor" : "Copied to clipboard", DONE_RESET_MS);
     doneTimerRef.current = setTimeout(() => {
       setStatus("idle");
       window.api.overlay.clear();
