@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "build:mac": "electron-vite build && electron-builder --mac",
     "preview": "electron-vite preview"
   },
   "dependencies": {
@@ -16,6 +17,7 @@
     "@electron-toolkit/preload": "^3.0.0",
     "@vitejs/plugin-react": "^4.3.1",
     "electron": "^31.0.0",
+    "electron-builder": "26.15.2",
     "electron-vite": "^2.3.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

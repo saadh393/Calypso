@@ -1,0 +1,27 @@
+appId: com.calypso.app
+productName: Calypso
+directories:
+  output: dist
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+extraResources:
+  - from: resources
+    to: .
+mac:
+  target:
+    - dmg
+  category: public.app-category.productivity
+  icon: resources/Logo_.png
+  identity: null
+  extendInfo:
+    NSMicrophoneUsageDescription: Calypso uses the microphone for ChatGPT voice dictation.
+    NSAppleEventsUsageDescription: Calypso uses Apple Events to paste transcribed text at the cursor.
+  artifactName: ${productName}-${version}-${arch}.${ext}
+dmg:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+publish:
+  provider: github
+  owner: saadh393
+  repo: Calypso
