@@ -1,6 +1,6 @@
 import { app, BrowserWindow, screen } from 'electron'
+import { readFileSync } from 'fs'
 import { join } from 'path'
-import { pathToFileURL } from 'url'
 import { is } from '@electron-toolkit/utils'
 
 const SIZES = {
@@ -19,6 +19,7 @@ let win = null
 let dismissTimer = null
 let pending = null
 let seq = 0
+const soundCache = new Map()
 
 function anchor({ height }) {
   const { height: screenHeight } = screen.getPrimaryDisplay().workAreaSize
@@ -55,8 +56,16 @@ function getSoundUrl(sound) {
   const file = SOUND_FILES[sound]
   if (!file) return null
 
+  if (soundCache.has(sound)) return soundCache.get(sound)
+
   const path = app.isPackaged ? join(process.resourcesPath, file) : join(process.cwd(), 'resources', file)
-  return pathToFileURL(path).toString()
+  try {
+    const url = `data:audio/mpeg;base64,${readFileSync(path).toString('base64')}`
+    soundCache.set(sound, url)
+    return url
+  } catch {
+    return null
+  }
 }
 
 function buildRenderMessage(msg, id) {
@@ -85,7 +94,8 @@ export function createOverlay() {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      backgroundThrottling: false
     }
   })
 
@@ -115,9 +125,9 @@ export function showMessage(msg) {
 
   const id = ++seq
   applySize(msg.kind)
-  win.webContents.send('overlay:render', buildRenderMessage(msg, id))
   setInteractive(false)
   if (!win.isVisible()) win.showInactive()
+  win.webContents.send('overlay:render', buildRenderMessage(msg, id))
 
   const timeout = msg.timeout != null ? msg.timeout : TIMEOUTS[msg.kind]
   if (timeout) dismissTimer = setTimeout(hideOverlay, timeout)
@@ -132,9 +142,9 @@ export function confirmMessage(msg) {
 
   const id = ++seq
   applySize('confirm')
-  win.webContents.send('overlay:render', buildRenderMessage({ ...msg, kind: 'confirm' }, id))
   setInteractive(true)
   if (!win.isVisible()) win.showInactive()
+  win.webContents.send('overlay:render', buildRenderMessage({ ...msg, kind: 'confirm' }, id))
 
   return new Promise((resolve) => {
     pending = { id, resolve }

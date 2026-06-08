@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import OverlayActions from './OverlayActions'
+import { playOverlaySound } from './overlaySounds'
 import './overlay.css'
 
 function Overlay() {
   const [message, setMessage] = useState(null)
-  const lastSoundRef = useRef(null)
+  const lastMessageIdRef = useRef(null)
 
   useEffect(() => {
     window.api.onOverlayRender((_, msg) => {
       if (!msg || msg.kind === 'clear') {
-        lastSoundRef.current = null
         setMessage(null)
         return
       }
@@ -20,11 +20,9 @@ function Overlay() {
   }, [])
 
   useEffect(() => {
-    if (!message?.soundUrl || lastSoundRef.current === message.sound) return
-
-    lastSoundRef.current = message.sound
-    const audio = new Audio(message.soundUrl)
-    audio.play().catch(() => {})
+    if (!message?.sound || lastMessageIdRef.current === message.id) return
+    lastMessageIdRef.current = message.id
+    playOverlaySound(message.sound, message.soundUrl)
   }, [message])
 
   if (!message) return null

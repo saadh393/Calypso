@@ -2,6 +2,7 @@ import {useRef, useState, useEffect, useCallback} from "react";
 import WebViewContainer from "./components/WebViewContainer";
 import VoiceButton from "./components/VoiceButton";
 import {useChatGptReadiness} from "./hooks/useChatGptReadiness";
+import {addClipboardHistoryItem, loadClipboardHistory, saveClipboardHistory} from "./lib/clipboardHistory";
 import "./App.css";
 
 const DONE_RESET_MS = 2000;
@@ -15,15 +16,16 @@ const WAIT_MORE_ACTIONS = [
 
 function App() {
   const webviewRef = useRef(null);
-  const [isRecording, setIsRecording] = useState(false);
   const [status, setStatus] = useState("idle");
   const [isLoggedIn, setIsLoggedIn] = useState(true);
   const [outputMode, setOutputMode] = useState("clipboard");
+  const [clipboardHistory, setClipboardHistory] = useState(loadClipboardHistory);
+  const [webviewKey, setWebviewKey] = useState(0);
   const isRecordingRef = useRef(false);
   const confirmedRef = useRef(false);
   const isBusyRef = useRef(false);
   const doneTimerRef = useRef(null);
-  const readiness = useChatGptReadiness(webviewRef);
+  const readiness = useChatGptReadiness(webviewRef, webviewKey);
 
   useEffect(() => {
     window.api.ensureMicAccess();
@@ -36,10 +38,17 @@ function App() {
     window.api.setOutputMode(mode);
   }, []);
 
+  const addClipboardHistory = useCallback((text) => {
+    setClipboardHistory((items) => {
+      const nextItems = addClipboardHistoryItem(items, text);
+      saveClipboardHistory(nextItems);
+      return nextItems;
+    });
+  }, []);
+
   const resetIdle = useCallback(() => {
     isRecordingRef.current = false;
     confirmedRef.current = false;
-    setIsRecording(false);
     setStatus("idle");
     window.api.overlay.clear();
   }, []);
@@ -75,7 +84,6 @@ function App() {
     clearTimeout(doneTimerRef.current);
     isRecordingRef.current = true;
     confirmedRef.current = false;
-    setIsRecording(true);
     setStatus("preparing");
     window.api.overlay.status("Preparing ChatGPT…", "processing", "preparing");
 
@@ -86,7 +94,6 @@ function App() {
     if (!started) {
       isRecordingRef.current = false;
       confirmedRef.current = false;
-      setIsRecording(false);
       setStatus("idle");
       window.api.overlay.error("Couldn't start recording — ChatGPT may have changed");
       return;
@@ -97,6 +104,7 @@ function App() {
 
   const deliverTranscription = useCallback(async (text) => {
     const result = await window.api.deliverText(text);
+    addClipboardHistory(text);
     webviewRef.current?.clearAndReload();
     setStatus("done");
     window.api.overlay.transcripted(result?.pasted ? "Pasted at cursor" : "Copied to clipboard", DONE_RESET_MS);
@@ -104,12 +112,37 @@ function App() {
       setStatus("idle");
       window.api.overlay.clear();
     }, DONE_RESET_MS);
+  }, [addClipboardHistory]);
+
+  const copyHistoryItem = useCallback((text) => {
+    window.api.copyToClipboard(text);
+    addClipboardHistory(text);
+    window.api.overlay.notice("Copied to clipboard", DONE_RESET_MS);
+  }, [addClipboardHistory]);
+
+  const reloadWebviewInstance = useCallback(() => {
+    clearTimeout(doneTimerRef.current);
+    isRecordingRef.current = false;
+    confirmedRef.current = false;
+    isBusyRef.current = false;
+    webviewRef.current?.cancelRecording();
+    webviewRef.current?.stopDictationState();
+    setIsLoggedIn(true);
+    setStatus("preparing");
+    window.api.overlay.status("Preparing ChatGPT…", "processing", "preparing");
+    setWebviewKey((value) => value + 1);
   }, []);
+
+  useEffect(() => {
+    if (readiness !== "ready" || status !== "preparing" || isRecordingRef.current || isBusyRef.current) return;
+    setStatus("idle");
+    window.api.overlay.clear();
+  }, [readiness, status]);
 
   const transcribe = useCallback(async () => {
     while (true) {
       setStatus("transcribing");
-      window.api.overlay.status("Transcribing…", "processing");
+      window.api.overlay.status("Transcribing…", "processing", "transcripted");
 
       const text = await webviewRef.current?.readTranscription({timeout: TRANSCRIBE_WAIT_MS});
       if (text) {
@@ -149,7 +182,6 @@ function App() {
     }
 
     isBusyRef.current = true;
-    setIsRecording(false);
     webviewRef.current?.triggerDictation();
 
     transcribe().finally(() => {
@@ -173,26 +205,26 @@ function App() {
   useEffect(() => {
     window.api.onToggleRecording(() => toggleRecordingRef.current?.());
     window.api.onSendMessage(() => sendMessage());
-    window.api.onReloadWebview(() => webviewRef.current?.reload());
+    window.api.onReloadWebview(() => reloadWebviewInstance());
     return () => {
       window.api.offToggleRecording();
       window.api.offSendMessage();
       window.api.offReloadWebview();
     };
-  }, [sendMessage]);
+  }, [reloadWebviewInstance, sendMessage]);
 
   return (
     <div className="app">
-      <WebViewContainer ref={webviewRef} onLoginState={setIsLoggedIn} />
+      <WebViewContainer key={webviewKey} ref={webviewRef} onLoginState={setIsLoggedIn} />
       <VoiceButton
-        isRecording={isRecording}
         status={status}
         isLoggedIn={isLoggedIn}
         readiness={readiness}
         outputMode={outputMode}
         onOutputModeChange={changeOutputMode}
-        onToggle={toggleRecording}
-        onSend={sendMessage}
+        history={clipboardHistory}
+        onCopyHistoryItem={copyHistoryItem}
+        onReloadWebview={reloadWebviewInstance}
       />
     </div>
   );

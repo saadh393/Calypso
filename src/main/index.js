@@ -12,6 +12,8 @@ import { APP_NAME, getAppIcon } from './assets'
 const ACCESSIBILITY_SETTINGS_URL =
   'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
 
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
+
 function promptAccessibility() {
   dialog
     .showMessageBox(mainWindow, {

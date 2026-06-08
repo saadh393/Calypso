@@ -1,4 +1,5 @@
-import OutputModeToggle from './OutputModeToggle'
+import { useCallback, useState } from 'react'
+import SettingsMenu from './SettingsMenu'
 
 const STATUS_LABELS = {
   idle: 'Ready',
@@ -10,61 +11,49 @@ const STATUS_LABELS = {
   done: 'Copied to clipboard'
 }
 
-const isMac = navigator.platform.startsWith('Mac')
-const mod = isMac ? '⌘' : 'Ctrl'
-
-function VoiceButton({ isRecording, status, isLoggedIn, readiness, outputMode, onOutputModeChange, onToggle, onSend }) {
-  const canRecord = isLoggedIn && readiness === 'ready'
+function VoiceButton({
+  status,
+  isLoggedIn,
+  readiness,
+  outputMode,
+  onOutputModeChange,
+  history,
+  onCopyHistoryItem,
+  onReloadWebview
+}) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const statusLabel = !isLoggedIn
-    ? 'Not logged in — click Import Cookie'
+    ? 'Not logged in'
     : readiness === 'preparing'
       ? 'Preparing ChatGPT…'
-      : readiness === 'error'
-        ? 'ChatGPT unavailable — try Import Cookie'
+    : readiness === 'error'
+        ? 'ChatGPT unavailable'
         : (STATUS_LABELS[status] ?? 'Ready')
+  const closeSettings = useCallback(() => setSettingsOpen(false), [])
 
   return (
     <div className="controls-bar">
-      <button
-        className={`mic-btn${isRecording ? ' active' : ''}${!canRecord ? ' disabled' : ''}`}
-        onClick={canRecord ? onToggle : undefined}
-        title={`Toggle recording  (${mod}+Shift+R)`}
-        disabled={!canRecord}
-      >
-        {isRecording ? '■' : '●'}
-      </button>
-
       <span className={`status${!isLoggedIn || readiness === 'error' ? ' login-warning' : ''}`}>
         {statusLabel}
       </span>
 
       <button
-        className="send-btn"
-        onClick={onSend}
-        title={`Send to ChatGPT  (${mod}+Shift+D)`}
+        className="settings-btn"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={() => setSettingsOpen((value) => !value)}
+        title="Settings"
       >
-        &#8593;
+        ⚙
       </button>
-
-      <span className="hints">{mod}+Shift+R &nbsp;|&nbsp; {mod}+Shift+D</span>
-
-      <OutputModeToggle value={outputMode} onChange={onOutputModeChange} />
-
-      <button
-        className="connect-btn"
-        onClick={() => window.api.importChromeSession()}
-        title="List Chrome profiles and import chatgpt.com cookies"
-      >
-        Import Cookie
-      </button>
-
-      <button
-        className="quit-btn"
-        onClick={() => window.api.quit()}
-        title="Quit"
-      >
-        &#x2715;
-      </button>
+      <SettingsMenu
+        open={settingsOpen}
+        outputMode={outputMode}
+        onOutputModeChange={onOutputModeChange}
+        history={history}
+        onCopyHistoryItem={onCopyHistoryItem}
+        onReloadWebview={onReloadWebview}
+        onClose={closeSettings}
+      />
     </div>
   )
 }

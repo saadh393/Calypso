@@ -7,10 +7,11 @@ const MAX_RELOADS = 5
 const READINESS_ERROR =
   'ChatGPT did not become ready. The page may have changed or you may be signed out. Try Import Cookie, then restart the app.'
 
-export function useChatGptReadiness(webviewRef) {
+export function useChatGptReadiness(webviewRef, reloadKey = 0) {
   const [readiness, setReadiness] = useState('preparing')
 
   useEffect(() => {
+    setReadiness('preparing')
     let polls = 0
     let reloads = 0
     let stopped = false
@@ -49,12 +50,13 @@ export function useChatGptReadiness(webviewRef) {
       webviewRef.current?.reload()
     }
 
+    tick()
     id = setInterval(tick, POLL_INTERVAL_MS)
     return () => {
       stopped = true
       clearInterval(id)
     }
-  }, [webviewRef])
+  }, [webviewRef, reloadKey])
 
   return readiness
 }
