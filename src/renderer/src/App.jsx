@@ -113,7 +113,7 @@ function App() {
 
       const text = await webviewRef.current?.readTranscription({timeout: TRANSCRIBE_WAIT_MS});
       if (text) {
-        deliverTranscription(text);
+        await deliverTranscription(text);
         return;
       }
 

@@ -139,13 +139,22 @@ function createWindow() {
       sandbox: false,
       webviewTag: true,
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      backgroundThrottling: false
     }
   })
 
-  mainWindow.on('ready-to-show', () => mainWindow.show())
+  let didShowInitialWindow = false
+  mainWindow.on('ready-to-show', () => {
+    if (didShowInitialWindow) return
+    didShowInitialWindow = true
+    mainWindow.show()
+  })
 
-  mainWindow.on('minimize', () => mainWindow.hide())
+  mainWindow.on('minimize', (e) => {
+    e.preventDefault()
+    mainWindow.hide()
+  })
 
   mainWindow.on('close', (e) => {
     if (!isQuitting) {

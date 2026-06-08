@@ -297,6 +297,7 @@ const WebViewContainer = forwardRef(({onLoginState}, ref) => {
       partition="persist:chatgpt"
       useragent={USER_AGENT}
       allowpopups="true"
+      webpreferences="backgroundThrottling=false"
       style={{flex: 1, width: "100%", height: "100%"}}
     />
   );
