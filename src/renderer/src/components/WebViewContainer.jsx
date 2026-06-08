@@ -38,6 +38,16 @@ function buildSendScript() {
   `;
 }
 
+function buildCancelDictationScript() {
+  return `
+    (() => {
+      const btn = document.querySelector('button[aria-label="Cancel dictation"]');
+      if (btn) { btn.click(); return true; }
+      return false;
+    })()
+  `;
+}
+
 function buildClearInputScript() {
   return `
     (() => {
@@ -124,6 +134,10 @@ const WebViewContainer = forwardRef(({onLoginState}, ref) => {
     },
 
     triggerDictation,
+
+    cancelDictation: () => {
+      domRef.current?.executeJavaScript(buildCancelDictationScript()).catch(() => {});
+    },
 
     clearInput: () => {
       domRef.current?.executeJavaScript(buildClearInputScript()).catch(() => {});

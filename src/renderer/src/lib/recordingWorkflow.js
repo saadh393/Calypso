@@ -209,7 +209,7 @@ export function createRecordingWorkflow({setStatus, overlay, actions, getSnapsho
 
   const cancel = () => {
     if (state !== "recording" && state !== "preparing") return;
-    if (triggered) actions.triggerDictation();
+    actions.cancelDictation();
     reset();
   };
 

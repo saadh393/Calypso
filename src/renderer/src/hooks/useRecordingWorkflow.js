@@ -17,6 +17,7 @@ export function useRecordingWorkflow({webviewRef, sensor, readiness, addHistory,
       getPrepareMs: () => prepareSecondsRef.current * 1000,
       actions: {
         triggerDictation: () => webviewRef.current?.triggerDictation(),
+        cancelDictation: () => webviewRef.current?.cancelDictation(),
         clearInput: () => webviewRef.current?.clearInput(),
         clearAndReload: () => webviewRef.current?.clearAndReload(),
         reload: () => webviewRef.current?.reload(),
